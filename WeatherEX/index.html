@@ -14,17 +14,37 @@
     <button id="weatherButton" type="button">获取当前位置气温</button>
 
     <section id="result" class="result" hidden>
+      <div class="weather-summary">
+        <span id="weatherIcon" class="weather-icon" aria-hidden="true">--</span>
+        <span class="weather-copy">
+          <span class="label">当前天气</span>
+          <strong id="weatherDescription">--</strong>
+          <span class="location-line">
+            <span id="country">--</span>
+            <span class="location-separator" aria-hidden="true">/</span>
+            <span id="city">--</span>
+          </span>
+        </span>
+      </div>
       <div>
         <span class="label">当前气温</span>
         <strong id="temperature">--</strong>
       </div>
       <div>
-        <span class="label">纬度</span>
-        <span id="latitude">--</span>
+        <span class="label">体感温度</span>
+        <span id="apparentTemperature">--</span>
       </div>
       <div>
-        <span class="label">经度</span>
-        <span id="longitude">--</span>
+        <span class="label">湿度</span>
+        <span id="humidity">--</span>
+      </div>
+      <div>
+        <span class="label">降水量</span>
+        <span id="precipitation">--</span>
+      </div>
+      <div>
+        <span class="label">风速</span>
+        <span id="windSpeed">--</span>
       </div>
       <div>
         <span class="label">更新时间</span>

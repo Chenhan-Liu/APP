@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>当前所在地气温</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="weather-card" aria-live="polite">
+    <h1>当前所在地气温</h1>
+    <p class="hint">点击按钮后，浏览器会请求定位权限并查询当前气温。</p>
+
+    <button id="weatherButton" type="button">获取当前位置气温</button>
+
+    <section id="result" class="result" hidden>
+      <div>
+        <span class="label">当前气温</span>
+        <strong id="temperature">--</strong>
+      </div>
+      <div>
+        <span class="label">纬度</span>
+        <span id="latitude">--</span>
+      </div>
+      <div>
+        <span class="label">经度</span>
+        <span id="longitude">--</span>
+      </div>
+      <div>
+        <span class="label">更新时间</span>
+        <span id="updatedAt">--</span>
+      </div>
+    </section>
+
+    <p id="message" class="message"></p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

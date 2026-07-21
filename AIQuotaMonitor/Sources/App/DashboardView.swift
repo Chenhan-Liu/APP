@@ -14,7 +14,7 @@ struct DashboardView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)
-            .padding(.bottom, 18)
+            .padding(.bottom, 22)
 
             if selectedTab == 0 {
                 overview
@@ -23,7 +23,7 @@ struct DashboardView: View {
             }
         }
         .background(Color.quotaCanvas)
-        .frame(minWidth: 820, minHeight: 560)
+        .frame(minWidth: 820, minHeight: 680)
     }
 
     private var header: some View {
@@ -47,8 +47,8 @@ struct DashboardView: View {
             .disabled(model.isRefreshing)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 22)
-        .padding(.bottom, 18)
+        .padding(.top, 28)
+        .padding(.bottom, 22)
     }
 
     private var overview: some View {
@@ -71,7 +71,7 @@ struct DashboardView: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.bottom, 30)
     }
 }
 

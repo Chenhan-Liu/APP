@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>AIQuotaMonitor candidate A — edge-to-edge, 50 percent opacity</title>
+  <g opacity="0.5">
+    <rect x="0" y="0" width="1024" height="1024" rx="232" fill="#638475"/>
+
+    <path d="M512 164 C523 211 549 237 596 248 C549 259 523 285 512 332 C501 285 475 259 428 248 C475 237 501 211 512 164 Z"
+          fill="#90E39A"/>
+
+    <g>
+      <rect x="196" y="388" width="632" height="96" rx="48" fill="#FFFFFF" opacity="0.18"/>
+      <rect x="196" y="388" width="442" height="96" rx="48" fill="#DDF093"/>
+
+      <rect x="196" y="536" width="632" height="96" rx="48" fill="#FFFFFF" opacity="0.18"/>
+      <rect x="196" y="536" width="316" height="96" rx="48" fill="#F6D0B1"/>
+
+      <rect x="196" y="684" width="632" height="96" rx="48" fill="#FFFFFF" opacity="0.18"/>
+      <rect x="196" y="684" width="506" height="96" rx="48" fill="#CE4760"/>
+    </g>
+  </g>
+</svg>

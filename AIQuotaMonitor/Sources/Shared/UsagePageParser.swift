@@ -11,6 +11,10 @@ struct UsagePageParser {
             return .unavailable(id: "\(provider.rawValue)-primary", title: windowTitle, message: "官方页面没有返回内容")
         }
 
+        if provider == .claude, let credits = parseClaudeCredits(in: normalized, now: now) {
+            return credits
+        }
+
         let searchTerms: [String]
         if provider == .chatGPT {
             searchTerms = ["GPT-5.6 Sol", "GPT-5.6", "Sol", "GPT-5"]
@@ -58,6 +62,57 @@ struct UsagePageParser {
         let start = lowercased.index(match.lowerBound, offsetBy: -min(500, lowercased.distance(from: lowercased.startIndex, to: match.lowerBound)))
         let end = lowercased.index(match.upperBound, offsetBy: min(900, lowercased.distance(from: match.upperBound, to: lowercased.endIndex)))
         return String(text[start..<end])
+    }
+
+    private static func parseClaudeCredits(in text: String, now: Date) -> QuotaWindow? {
+        let balanceLabels = "current balance|available balance|remaining balance|現在の残高|当前余额|目前余额|可用余额|剩余余额"
+        let promotionalLabels = "promotional credits?|promotion credits?|promo credits?|プロモーションクレジット|促销点数|促销额度|推广点数"
+
+        let balance = firstMoney(in: text, patterns: [
+            "(?is)\\$\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)\\s*(?:\(balanceLabels))",
+            "(?is)(?:\(balanceLabels))[^$]{0,80}\\$\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)"
+        ])
+        guard let balance else { return nil }
+
+        let promotionalTotal = firstMoney(in: text, patterns: [
+            "(?is)\\$\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)\\s*(?:\(promotionalLabels))",
+            "(?is)(?:\(promotionalLabels))[^$]{0,80}\\$\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)"
+        ])
+        let hasPromotionalCredit = text.range(
+            of: promotionalLabels,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
+        let total = promotionalTotal
+            ?? (hasPromotionalCredit ? AppConstants.claudeFablePromotionalCreditTotal : nil)
+        let expiration = firstMatch(
+            in: text,
+            pattern: #"(?is)(?:expires?|expiration|expiry|有効期限|有效期|到期)\s*[：:]?\s*([^\n]{1,40})"#
+        )?.dropFirst().first?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return QuotaWindow(
+            id: "claude-primary",
+            title: AppConstants.claudeDefaultWindowTitle,
+            usedFraction: nil,
+            periodLabel: "点数余额",
+            resetDescription: nil,
+            state: .available,
+            sourceDescription: "Claude 官方点数数据",
+            errorMessage: nil,
+            updatedAt: now,
+            creditBalance: balance,
+            creditTotal: total,
+            currencyCode: "USD",
+            creditExpirationDescription: expiration.map { "有效期至 \($0)" } ?? "点数有效期待同步"
+        )
+    }
+
+    private static func firstMoney(in text: String, patterns: [String]) -> Double? {
+        for pattern in patterns {
+            guard let match = firstMatch(in: text, pattern: pattern), match.count > 1 else { continue }
+            let normalized = match[1].replacingOccurrences(of: ",", with: "")
+            if let value = Double(normalized) { return value }
+        }
+        return nil
     }
 
     private static func findUsedFraction(in text: String) -> Double? {

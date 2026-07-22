@@ -78,20 +78,21 @@ final class WebUsageCoordinator: NSObject, ObservableObject, WKNavigationDelegat
 
         let deadline = Date().addingTimeInterval(20)
         var latestPageText = ""
+        var latestStructuredMetric: QuotaWindow?
 
         while Date() < deadline {
             do {
                 let captured = try await capturedResponses(from: view)
                 if let metric = ClaudeStructuredUsageParser.parse(capturedJSON: captured) {
-                    return metric
+                    if metric.isCreditBased { return metric }
+                    latestStructuredMetric = metric
                 }
 
                 latestPageText = try await pageText(from: view)
-                if !view.isLoading {
-                    let fallback = UsagePageParser.parse(provider: .claude, pageText: latestPageText)
-                    if fallback.state == .available || fallback.state == .signedOut {
-                        return fallback
-                    }
+                let pageMetric = UsagePageParser.parse(provider: .claude, pageText: latestPageText)
+                if pageMetric.isCreditBased { return pageMetric }
+                if !view.isLoading, pageMetric.state == .signedOut {
+                    return pageMetric
                 }
             } catch {
                 // The page may still be navigating; retry until the deadline.
@@ -101,6 +102,8 @@ final class WebUsageCoordinator: NSObject, ObservableObject, WKNavigationDelegat
         }
 
         var fallback = UsagePageParser.parse(provider: .claude, pageText: latestPageText)
+        if fallback.isCreditBased { return fallback }
+        if let latestStructuredMetric { return latestStructuredMetric }
         if fallback.state != .available {
             fallback.errorMessage = "未捕获到 Claude 官方结构化使用量，请确认已登录并打开使用量页"
         }
@@ -146,7 +149,7 @@ final class WebUsageCoordinator: NSObject, ObservableObject, WKNavigationDelegat
 
       const shouldKeep = (url, text) => {
         const sample = `${url} ${text.slice(0, 12000)}`;
-        return /usage|limit|quota|five_hour|seven_day|weekly_scoped|utilization|fable/i.test(sample);
+        return /usage|limit|quota|five_hour|seven_day|weekly_scoped|utilization|fable|credit|balance|promotion|billing|spend/i.test(sample);
       };
 
       const save = (url, text) => {
@@ -428,16 +431,143 @@ private enum ClaudeStructuredUsageParser {
             return nil
         }
 
-        for record in records.reversed() {
+        let payloads: [Any] = records.reversed().compactMap { record in
             guard let body = record["body"] as? String,
                   let bodyData = body.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: bodyData) else { continue }
+                  let json = try? JSONSerialization.jsonObject(with: bodyData) else { return nil }
+            return json
+        }
 
+        // Claude loads plan limits and Usage Credits through separate requests.
+        // Scan every captured response for credits before considering the older
+        // percentage-based limits so Fable's billing source always wins.
+        for json in payloads {
+            if let metric = creditMetric(in: json, now: now) { return metric }
+        }
+        for json in payloads {
             let dictionaries = allDictionaries(in: json)
             if let metric = fableMetric(in: dictionaries, now: now) { return metric }
+        }
+        for json in payloads {
+            let dictionaries = allDictionaries(in: json)
             if let metric = standardMetric(in: dictionaries, now: now) { return metric }
         }
         return nil
+    }
+
+    private struct ScalarValue {
+        let path: String
+        let value: Any
+    }
+
+    private static func creditMetric(in json: Any, now: Date) -> QuotaWindow? {
+        let values = scalarValues(in: json)
+        let balanceCandidates = values.compactMap { candidate -> (score: Int, amount: Double)? in
+            let path = candidate.path.lowercased()
+            guard path.contains("balance") || path.contains("available_amount") || path.contains("remaining_amount") else {
+                return nil
+            }
+            guard !path.contains("limit"), !path.contains("spent"), !path.contains("used") else { return nil }
+            guard let amount = moneyNumber(candidate.value, path: path) else { return nil }
+            var score = 10
+            if path.contains("current") { score += 8 }
+            if path.contains("credit") { score += 5 }
+            if path.contains("available") || path.contains("remaining") { score += 4 }
+            if path.contains("promo") || path.contains("grant") { score -= 5 }
+            return (score, amount)
+        }
+        let promotionalCandidates = values.compactMap { candidate -> (score: Int, amount: Double)? in
+            let path = candidate.path.lowercased()
+            guard path.contains("promo") || path.contains("promotion") || path.contains("grant") else { return nil }
+            guard !path.contains("expires"), !path.contains("expiry"), !path.contains("date") else { return nil }
+            guard let amount = moneyNumber(candidate.value, path: path) else { return nil }
+            var score = 10
+            if path.contains("amount") || path.contains("balance") || path.contains("credit") { score += 5 }
+            if path.contains("initial") || path.contains("total") { score += 3 }
+            if path.contains("used") || path.contains("spent") { score -= 8 }
+            return (score, amount)
+        }
+
+        guard let rawBalance = balanceCandidates.max(by: { $0.score < $1.score })?.amount,
+              let rawTotal = promotionalCandidates.max(by: { $0.score < $1.score })?.amount else { return nil }
+        let balance = normalizedDollarAmount(rawBalance)
+        let total = normalizedDollarAmount(rawTotal)
+        guard total > 0 else { return nil }
+
+        let expiration = values.first { candidate in
+            let path = candidate.path.lowercased()
+            return path.contains("expires") || path.contains("expiration") || path.contains("expiry")
+        }.flatMap { expirationDescription($0.value) }
+
+        return QuotaWindow(
+            id: "claude-primary",
+            title: AppConstants.claudeDefaultWindowTitle,
+            usedFraction: nil,
+            periodLabel: "点数余额",
+            resetDescription: nil,
+            state: .available,
+            sourceDescription: "Claude 官方结构化点数数据",
+            errorMessage: nil,
+            updatedAt: now,
+            creditBalance: balance,
+            creditTotal: total,
+            currencyCode: "USD",
+            creditExpirationDescription: expiration ?? "点数有效期待同步"
+        )
+    }
+
+    private static func scalarValues(in value: Any, path: String = "") -> [ScalarValue] {
+        if let dictionary = value as? [String: Any] {
+            return dictionary.flatMap { key, child in
+                scalarValues(in: child, path: path.isEmpty ? key : "\(path).\(key)")
+            }
+        }
+        if let array = value as? [Any] {
+            return array.enumerated().flatMap { index, child in
+                scalarValues(in: child, path: "\(path)[\(index)]")
+            }
+        }
+        return [ScalarValue(path: path, value: value)]
+    }
+
+    private static func moneyNumber(_ value: Any, path: String) -> Double? {
+        let raw: Double?
+        if let number = value as? NSNumber {
+            raw = number.doubleValue
+        } else if let text = value as? String {
+            let cleaned = text
+                .replacingOccurrences(of: "$", with: "")
+                .replacingOccurrences(of: ",", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            raw = Double(cleaned)
+        } else {
+            raw = nil
+        }
+        guard let raw else { return nil }
+        if path.contains("micro") { return raw / 1_000_000 }
+        if path.contains("cent") { return raw / 100 }
+        return raw
+    }
+
+    private static func normalizedDollarAmount(_ amount: Double) -> Double {
+        // Some Claude billing responses expose integer cents without naming the
+        // unit in the key (for example 10000 for the $100 promotional grant).
+        // Values at or above 10,000 are outside the normal individual credit
+        // balance range, so normalize them to dollars here.
+        amount >= 10_000 ? amount / 100 : amount
+    }
+
+    private static func expirationDescription(_ value: Any) -> String? {
+        if let number = value as? NSNumber {
+            let raw = number.doubleValue
+            let date = Date(timeIntervalSince1970: raw > 20_000_000_000 ? raw / 1000 : raw)
+            return "有效期至 \(date.formatted(.dateTime.year().month().day().locale(Locale(identifier: "zh_CN"))))"
+        }
+        guard let text = value as? String, !text.isEmpty else { return nil }
+        if let date = ISO8601DateFormatter().date(from: text) {
+            return "有效期至 \(date.formatted(.dateTime.year().month().day().locale(Locale(identifier: "zh_CN"))))"
+        }
+        return "有效期至 \(text)"
     }
 
     private static func fableMetric(in dictionaries: [[String: Any]], now: Date) -> QuotaWindow? {

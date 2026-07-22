@@ -9,6 +9,7 @@ struct AIQuotaMonitorApp: App {
             DashboardView(model: model)
         }
         .windowResizability(.contentSize)
+        .defaultSize(width: 980, height: 700)
 
         Settings {
             SettingsView(model: model)

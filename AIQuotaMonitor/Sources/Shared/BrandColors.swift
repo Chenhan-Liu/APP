@@ -7,13 +7,38 @@ extension Color {
     static let quotaCanvas = Color(nsColor: .windowBackgroundColor)
 }
 
+struct ProviderLogo: View {
+    let provider: UsageProvider
+    var size: CGFloat = 18
+
+    private var assetName: String {
+        provider == .chatGPT ? "ProviderChatGPTLogo" : "ProviderClaudeLogo"
+    }
+
+    private var tint: Color {
+        provider == .chatGPT ? .quotaChatGPT : .quotaClaude
+    }
+
+    var body: some View {
+        Image(assetName)
+            .resizable()
+            .renderingMode(.template)
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .foregroundStyle(tint)
+            .accessibilityHidden(true)
+    }
+}
+
 struct CircularUsageRing: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let provider: ProviderSnapshot
     let window: QuotaWindow
     let diameter: CGFloat
 
     private var progress: CGFloat {
-        CGFloat(window.usedFraction ?? 0)
+        CGFloat(window.displayedProgressFraction ?? 0)
     }
 
     private var tint: Color {
@@ -27,7 +52,7 @@ struct CircularUsageRing: View {
             Circle()
                 .stroke(tint.opacity(0.12), lineWidth: diameter * 0.085)
 
-            if window.usedFraction != nil {
+            if window.displayedProgressFraction != nil {
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(
@@ -38,10 +63,12 @@ struct CircularUsageRing: View {
             }
 
             VStack(spacing: 2) {
-                Text(window.usedPercentText)
-                    .font(.system(size: diameter * 0.20, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.quotaInk)
-                Text(window.usedFraction == nil ? "暂无精确数据" : "已使用")
+                Text(window.ringPrimaryText)
+                    .font(.system(size: diameter * (window.isCreditBased ? 0.155 : 0.20), weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.68)
+                    .lineLimit(1)
+                    .foregroundStyle(colorScheme == .dark ? Color.white : Color.quotaInk)
+                Text(window.ringSecondaryText)
                     .font(.system(size: diameter * 0.085, weight: .medium))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -51,6 +78,10 @@ struct CircularUsageRing: View {
         .frame(width: diameter, height: diameter)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(provider.displayName) \(window.title)")
-        .accessibilityValue(window.usedFraction == nil ? "暂无精确数据" : "已使用 \(window.usedPercentText)")
+        .accessibilityValue(
+            window.isCreditBased
+                ? "剩余点数 \(window.ringPrimaryText)"
+                : (window.usedFraction == nil ? "暂无精确数据" : "已使用 \(window.usedPercentText)")
+        )
     }
 }

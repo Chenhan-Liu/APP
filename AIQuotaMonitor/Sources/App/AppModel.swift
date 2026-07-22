@@ -31,11 +31,13 @@ final class AppModel: ObservableObject {
         Task { [weak self] in
             guard let self else { return }
             let nextSnapshot = await webSessions.refreshAll()
-            snapshot = nextSnapshot
-            UsageStore.shared.save(nextSnapshot)
+            let stabilizedSnapshot = nextSnapshot.preservingRecentClaudeCredits(from: snapshot)
+            snapshot = stabilizedSnapshot
+            UsageStore.shared.save(stabilizedSnapshot)
+            WidgetCenter.shared.reloadTimelines(ofKind: AppConstants.widgetKind)
             WidgetCenter.shared.reloadAllTimelines()
             isRefreshing = false
-            statusMessage = "已更新：\(nextSnapshot.lastRefreshAt?.formatted(date: .omitted, time: .shortened) ?? "刚刚")"
+            statusMessage = "已更新：\(stabilizedSnapshot.lastRefreshAt?.formatted(date: .omitted, time: .shortened) ?? "刚刚")"
         }
     }
 

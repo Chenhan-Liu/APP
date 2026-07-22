@@ -14,7 +14,7 @@ struct DashboardView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)
-            .padding(.bottom, 18)
+            .padding(.bottom, 22)
 
             if selectedTab == 0 {
                 overview
@@ -23,7 +23,7 @@ struct DashboardView: View {
             }
         }
         .background(Color.quotaCanvas)
-        .frame(minWidth: 820, minHeight: 560)
+        .frame(minWidth: 820, minHeight: 680)
     }
 
     private var header: some View {
@@ -47,8 +47,8 @@ struct DashboardView: View {
             .disabled(model.isRefreshing)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 22)
-        .padding(.bottom, 18)
+        .padding(.top, 28)
+        .padding(.bottom, 22)
     }
 
     private var overview: some View {
@@ -62,7 +62,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label("数据说明", systemImage: "lock.shield")
                     .font(.headline)
-                Text("ChatGPT 额度通过本机 Codex 官方服务读取；Claude 优先读取官方使用量接口的结构化响应。登录凭据不会写入 Widget，也不会发送到第三方服务器。")
+                Text("ChatGPT 额度通过本机 Codex 官方服务读取；Claude Fable 5 通过本机登录会话读取官方结构化点数余额与有效期。登录凭据不会写入 Widget，也不会发送到第三方服务器。")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -71,7 +71,7 @@ struct DashboardView: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.bottom, 30)
     }
 }
 
@@ -89,9 +89,12 @@ struct UsageCard: View {
     var body: some View {
         VStack(spacing: 14) {
             HStack {
-                Label(provider.displayName, systemImage: provider.id == .chatGPT ? "bubble.left.and.bubble.right" : "sparkles")
-                    .font(.headline)
-                    .foregroundStyle(tint)
+                HStack(spacing: 7) {
+                    ProviderLogo(provider: provider.id, size: 19)
+                    Text(provider.displayName)
+                }
+                .font(.headline)
+                .foregroundStyle(tint)
                 Spacer()
                 StatusPill(state: window.state)
             }
@@ -101,14 +104,16 @@ struct UsageCard: View {
             VStack(spacing: 5) {
                 Text(window.title)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
-                Text("剩余 \(window.remainingPercentText) · \(window.periodText)")
+                Text(window.summaryText)
                     .font(.callout.weight(.medium))
                     .foregroundStyle(.primary)
-                Text(window.resetText)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
+                if !window.detailText.isEmpty {
+                    Text(window.detailText)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             if let errorMessage = window.errorMessage {

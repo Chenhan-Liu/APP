@@ -26,6 +26,7 @@
 		200000000000000000000023 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 300000000000000000000023 /* AppKit.framework */; };
 		200000000000000000000024 /* AIQuotaWidget.appex in Embed Widget Extension */ = {isa = PBXBuildFile; fileRef = 300000000000000000000018 /* AIQuotaWidget.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		200000000000000000000025 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 300000000000000000000024 /* Assets.xcassets */; };
+		A30C8490300FA97E004D4B91 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 300000000000000000000024 /* Assets.xcassets */; };
 		A382A017300DFA0B001FCD11 /* BrandColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300000000000000000000001 /* BrandColors.swift */; };
 		A382A018300DFA0B001FCD11 /* UsageModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300000000000000000000002 /* UsageModels.swift */; };
 		A382A019300DFA0B001FCD11 /* UsagePageParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300000000000000000000003 /* UsagePageParser.swift */; };
@@ -278,7 +279,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				200000000000000000000025 /* Assets.xcassets in Resources */,
+				A30C8490300FA97E004D4B91 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -286,6 +287,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				200000000000000000000025 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -359,10 +361,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Resources/AIQuotaMonitor.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = V5VRQKJG9N;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = Resources/AppInfo.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -381,10 +382,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Resources/AIQuotaMonitor.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = V5VRQKJG9N;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = Resources/AppInfo.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -402,10 +402,9 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Resources/AIQuotaWidget.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = V5VRQKJG9N;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = Resources/WidgetInfo.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -424,10 +423,9 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Resources/AIQuotaWidget.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = V5VRQKJG9N;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = Resources/WidgetInfo.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

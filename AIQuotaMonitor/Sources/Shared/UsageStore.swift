@@ -24,14 +24,22 @@ final class UsageStore: @unchecked Sendable {
     }
 
     func loadSnapshot() -> UsageSnapshot {
-        for url in Self.uniqueURLs([localSnapshotURL, widgetSnapshotURL, legacySnapshotURL]) {
-            if let data = try? Data(contentsOf: url),
-               let snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data) {
-                return snapshot
-            }
+        decodedSnapshots().max(by: Self.isOlder) ?? .empty
+    }
+
+    func loadWidgetSnapshot() -> UsageSnapshot {
+        let snapshots = decodedSnapshots()
+        guard let newest = snapshots.max(by: Self.isOlder) else { return .empty }
+
+        guard let newestClaude = newest.provider(.claude),
+              !newestClaude.primaryWindow.isCreditBased,
+              let latestCreditSnapshot = snapshots
+                .filter({ $0.provider(.claude)?.primaryWindow.isCreditBased == true })
+                .max(by: Self.isOlder) else {
+            return newest
         }
-        guard let data = defaults.data(forKey: snapshotKey) else { return .empty }
-        return (try? JSONDecoder().decode(UsageSnapshot.self, from: data)) ?? .empty
+
+        return newest.preservingRecentClaudeCredits(from: latestCreditSnapshot)
     }
 
     func save(_ snapshot: UsageSnapshot) {
@@ -50,6 +58,22 @@ final class UsageStore: @unchecked Sendable {
     private static func uniqueURLs(_ urls: [URL]) -> [URL] {
         var seen = Set<String>()
         return urls.filter { seen.insert($0.standardizedFileURL.path).inserted }
+    }
+
+    private func decodedSnapshots() -> [UsageSnapshot] {
+        var snapshots: [UsageSnapshot] = Self.uniqueURLs([widgetSnapshotURL, legacySnapshotURL, localSnapshotURL]).compactMap { url -> UsageSnapshot? in
+            guard let data = try? Data(contentsOf: url) else { return nil }
+            return try? JSONDecoder().decode(UsageSnapshot.self, from: data)
+        }
+        if let data = defaults.data(forKey: snapshotKey),
+           let snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data) {
+            snapshots.append(snapshot)
+        }
+        return snapshots
+    }
+
+    private static func isOlder(_ lhs: UsageSnapshot, _ rhs: UsageSnapshot) -> Bool {
+        (lhs.lastRefreshAt ?? .distantPast) < (rhs.lastRefreshAt ?? .distantPast)
     }
 
     private static var realHomeDirectory: URL {

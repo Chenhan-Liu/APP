@@ -12,19 +12,19 @@ struct QuotaWidgetProvider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (QuotaWidgetEntry) -> Void) {
-        completion(QuotaWidgetEntry(date: Date(), snapshot: UsageStore.shared.loadSnapshot()))
+        completion(QuotaWidgetEntry(date: Date(), snapshot: UsageStore.shared.loadWidgetSnapshot()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<QuotaWidgetEntry>) -> Void) {
         let now = Date()
-        let entry = QuotaWidgetEntry(date: now, snapshot: UsageStore.shared.loadSnapshot())
+        let entry = QuotaWidgetEntry(date: now, snapshot: UsageStore.shared.loadWidgetSnapshot())
         let refreshDate = now.addingTimeInterval(AppConstants.refreshInterval)
         completion(Timeline(entries: [entry], policy: .after(refreshDate)))
     }
 }
 
 struct AIQuotaWidget: Widget {
-    let kind = "AIQuotaWidget"
+    let kind = AppConstants.widgetKind
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: QuotaWidgetProvider()) { entry in
@@ -44,6 +44,8 @@ struct QuotaWidgetView: View {
         switch family {
         case .systemSmall:
             smallLayout
+        case .systemLarge:
+            largeLayout
         default:
             mediumLayout
         }
@@ -72,23 +74,45 @@ struct QuotaWidgetView: View {
     }
 
     private var mediumLayout: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("AI 额度")
+                    .font(.subheadline.weight(.bold))
+                Spacer()
+                if let updatedAt = entry.snapshot.lastRefreshAt {
+                    Text("更新于 \(updatedAt.formatted(date: .omitted, time: .shortened))")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            HStack(spacing: 9) {
+                ForEach(Array(entry.snapshot.providers.prefix(2).enumerated()), id: \.element.id) { index, provider in
+                    if index > 0 { Divider() }
+                    WidgetMetricView(provider: provider, style: .compact)
+                }
+            }
+        }
+        .padding(.horizontal, 2)
+        .containerBackground(for: .widget) { Color.quotaCanvas }
+    }
+
+    private var largeLayout: some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("AI 额度")
                     .font(.headline.weight(.bold))
                 Spacer()
                 if let updatedAt = entry.snapshot.lastRefreshAt {
                     Text("更新于 \(updatedAt.formatted(date: .omitted, time: .shortened))")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            HStack(spacing: 18) {
-                ForEach(Array(entry.snapshot.providers.prefix(2).enumerated()), id: \.element.id) { index, provider in
-                    if index > 0 { Divider() }
-                    WidgetMetricView(provider: provider)
-                }
+            ForEach(Array(entry.snapshot.providers.prefix(2).enumerated()), id: \.element.id) { index, provider in
+                if index > 0 { Divider() }
+                WidgetMetricView(provider: provider, style: .expanded)
             }
         }
         .containerBackground(for: .widget) { Color.quotaCanvas }
@@ -97,32 +121,120 @@ struct QuotaWidgetView: View {
 
 struct WidgetMetricView: View {
     let provider: ProviderSnapshot
+    let style: WidgetMetricStyle
 
     private var window: QuotaWindow { provider.primaryWindow }
 
     var body: some View {
-        HStack(spacing: 10) {
-            CircularUsageRing(provider: provider, window: window, diameter: 82)
+        switch style {
+        case .compact:
+            compactBody
+        case .expanded:
+            expandedBody
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 4) {
+    private var compactBody: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 5) {
+                ProviderLogo(provider: provider.id, size: 13)
                 Text(provider.displayName)
-                    .font(.subheadline.weight(.bold))
+            }
+            .font(.system(size: 10, weight: .bold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+
+            HStack(spacing: 6) {
+                CircularUsageRing(provider: provider, window: window, diameter: 60)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(compactTitle)
+                        .font(.system(size: 11, weight: .semibold))
+                        .lineLimit(1)
+                        .allowsTightening(true)
+                    Text(window.compactCreditText)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .lineLimit(1)
+                        .allowsTightening(true)
+                    Text(compactPeriod)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .allowsTightening(true)
+                    if !compactReset.isEmpty {
+                        Text(compactReset)
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .allowsTightening(true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var expandedBody: some View {
+        HStack(spacing: 12) {
+            CircularUsageRing(provider: provider, window: window, diameter: 86)
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 7) {
+                    ProviderLogo(provider: provider.id, size: 18)
+                    Text(provider.displayName)
+                }
+                .font(.headline.weight(.bold))
                 Text(window.title)
-                    .font(.caption.weight(.semibold))
+                    .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
-                Text("剩余 \(window.remainingPercentText)")
-                    .font(.caption)
-                Text(window.periodText)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                Text(window.resetText)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .minimumScaleFactor(0.7)
+                Text(window.summaryText)
+                    .font(.callout.weight(.medium))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if !window.detailText.isEmpty {
+                    Text(window.detailText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
+
+    private var compactTitle: String {
+        switch window.title {
+        case "GPT-5.6 Sol": return "GPT-5.6"
+        case "Claude Fable 5": return "Fable 5"
+        default: return window.title
+        }
+    }
+
+    private var compactPeriod: String {
+        if window.isCreditBased {
+            guard let balance = window.creditBalance,
+                  let total = window.creditTotal,
+                  total > 0 else { return "点数余额" }
+            return "已用 \(window.formattedMoney(max(0, total - balance)))"
+        }
+        let period = window.periodText
+        if period == "Fable 每周额度" { return "Fable 每周" }
+        if period.hasSuffix("额度") { return String(period.dropLast(2)) }
+        return period
+    }
+
+    private var compactReset: String {
+        if window.isCreditBased { return "" }
+        if window.resetText == "重置时间待同步" { return "重置待同步" }
+        return window.detailText
+    }
+}
+
+enum WidgetMetricStyle {
+    case compact
+    case expanded
 }
 
 @main

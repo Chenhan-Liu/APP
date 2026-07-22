@@ -27,7 +27,7 @@ struct ConnectionView: View {
 
             if provider == .chatGPT {
                 ContentUnavailableView(
-                    "已改用本机结构化接口",
+                    "使用本机结构化接口",
                     systemImage: "checkmark.shield",
                     description: Text("点击“读取使用量”即可从 ChatGPT 自带的 Codex 服务取得周额度和重置时间。")
                 )
@@ -60,7 +60,7 @@ struct ConnectionView: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.bottom, 30)
         .onAppear {
             if provider == .claude && model.webSessions.webView(for: provider).url == nil {
                 model.webSessions.loadLoginPage(for: provider)
